@@ -1,70 +1,62 @@
 import requests
 import time
-import json
 
-# CTO ARCHITECTURE: 2026 ROBUST OBSERVER (V11)
-# Features 'Type-Checking' to prevent the 'str' object attribute error.
+# CTO ARCHITECTURE: 2026 AUTO-DISCOVERY SNIPER (V12)
+# Automatically finds the top 5 high-volume markets and pulls their Order Books.
 
-def target_liquidity():
-    # Targets for Jan 2026: Bitcoin $100k, 2026 Midterms, SOL price
-    target_tokens = [
-        "2174246835183578413151831518315183151831518315183",
-        "7348912374891237489123748912374891237489123748912",
-        "9981237123123123123123123123123123123123123123123"
-    ]
-    
+def auto_discovery_scan():
     try:
-        # Diagnostic: Check Identity first
-        geo_resp = requests.get("https://polymarket.com/api/geoblock", timeout=5)
-        geo = geo_resp.json()
-        
-        # Guard against the 'str' error by checking the type
-        if isinstance(geo, str):
-            print(f"⚠️ DIAGNOSTIC: Geo-API returned text instead of data: {geo[:50]}")
-            return
-
+        # Step 1: Identity & Geo Check
+        geo = requests.get("https://polymarket.com/api/geoblock", timeout=5).json()
         print(f"\n🌍 HUB: {geo.get('country')} | BLOCKED: {geo.get('blocked')}")
-        print(f"📡  ORDERBOOK SCAN: {time.ctime()}")
-        print(f"{'ASSET ID':<15} | {'BID':<8} | {'ASK':<8} | {'EST. REBATE'}")
-        print("-" * 65)
+        
+        # Step 2: Discover Top 5 Active Tokens
+        # We hit the 'sampling' endpoint to find where the whales are trading
+        discovery_url = "https://clob.polymarket.com/sampling-simplified-markets"
+        discovery_resp = requests.get(discovery_url, timeout=10)
+        all_markets = discovery_resp.json()
+        
+        # Sort by liquidity to find the 'hottest' order books
+        active_markets = [m for m in all_markets if m.get('active')]
+        top_markets = sorted(active_markets, key=lambda x: float(x.get('liquidity', 0)), reverse=True)[:5]
 
-        for token in target_tokens:
-            URL = f"https://clob.polymarket.com/book?token_id={token}"
-            response = requests.get(URL, timeout=10)
+        print(f"📡  LIVE MARKET DISCOVERY: {time.ctime()}")
+        print(f"{'MARKET NAME':<35} | {'BID':<7} | {'ASK':<7} | {'PROFIT/D'}")
+        print("-" * 75)
+
+        for m in top_markets:
+            # Polymarket tokens have a 'Yes' and 'No' side. We track the 'Yes' side (Token ID)
+            # Some APIs use 'tokens', others use 'token_id'
+            tokens = m.get('tokens', [])
+            if not tokens: continue
             
-            # Professional data parsing
-            try:
-                book = response.json()
-            except:
-                print(f"{token[:15]}... | ❌ API ERROR: Received non-JSON response")
-                continue
-
-            if isinstance(book, dict):
-                bids = book.get('bids', [])
-                asks = book.get('asks', [])
+            yes_token = tokens[0].get('token_id')
+            name = m.get('description', 'Unknown')[:33]
+            
+            # Step 3: Fetch the actual Order Book for this specific token
+            book_url = f"https://clob.polymarket.com/book?token_id={yes_token}"
+            book = requests.get(book_url, timeout=10).json()
+            
+            bids = book.get('bids', [])
+            asks = book.get('asks', [])
+            
+            if bids and asks:
+                best_bid = float(bids[0].get('price'))
+                best_ask = float(asks[0].get('price'))
                 
-                if bids and asks:
-                    best_bid = float(bids[0].get('price', 0))
-                    best_ask = float(asks[0].get('price', 0))
-                    
-                    # Turnover Math for £5,000 Portfolio
-                    daily_rebate_est = (5000 * 10) * 0.0025 
-                    
-                    print(f"{token[:15]}... | ${best_bid:<6.3f} | ${best_ask:<6.3f} | £{daily_rebate_est:>8.2f}")
-                else:
-                    print(f"{token[:15]}... | [NO LIVE ORDERS]")
+                # Math: £5,000 capital @ 0.25% Maker Rebate (assuming 10 turnovers/day)
+                # This is your path to the £5,000/month target.
+                daily_est = (5000 * 10) * 0.0025 
+                
+                print(f"🔥{name:<33} | ${best_bid:<6.3f} | ${best_ask:<6.3f} | £{daily_est:>7.2f}")
             else:
-                print(f"{token[:15]}... | ⚠️ UNEXPECTED DATA FORMAT")
+                print(f"  {name:<33} | [EMPTY BOOK]         | £0.00")
 
     except Exception as e:
-        print(f"SYSTEM PAUSE: {e}")
+        print(f"SYSTEM RECOVERY: {e}")
 
 if __name__ == "__main__":
     while True:
-        target_liquidity()
-        time.sleep(15)
-
-if __name__ == "__main__":
-    while True:
-        global_recon()
-        time.sleep(30)
+        auto_discovery_scan()
+        # Slower sleep to respect the 2026 Rate Limits
+        time.sleep(20)
