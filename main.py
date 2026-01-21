@@ -1,65 +1,48 @@
 import requests
 import time
-import json
 
-# CTO ARCHITECTURE: 2026 QUANT OBSERVER (V6 - AUTO-UNWRAPPER)
-# Designed to handle nested CLOB API responses and schema shifts.
+# CTO ARCHITECTURE: 2026 STABILITY UPGRADE (V8)
+# This version uses Gamma Endpoints for higher uptime and diagnostic reporting.
 
-def get_market_data():
-    # Primary 2026 CLOB Endpoint
-    CLOB_URL = "https://clob.polymarket.com/markets"
+def diagnostic_hunt():
+    # Switching to Gamma API - Generally more stable for public 'Recon'
+    URL = "https://gamma-api.polymarket.com/markets?active=true&limit=20&order=volume24hr&dir=desc"
     
     try:
-        response = requests.get(CLOB_URL, timeout=10)
-        raw_payload = response.json()
+        # Step 1: Check if the exchange even sees us
+        geo_check = requests.get("https://polymarket.com/api/geoblock", timeout=5).json()
+        location = geo_check.get('country', 'Unknown')
+        is_blocked = geo_check.get('blocked', False)
         
-        # --- DATA UNWRAPPER LOGIC ---
-        # The API often wraps the list in a dictionary key like 'data' or 'markets'
-        markets = []
-        if isinstance(raw_payload, list):
-            markets = raw_payload
-        elif isinstance(raw_payload, dict):
-            # Try common 2026 keys: 'data', 'markets', or 'result'
-            markets = raw_payload.get('data', raw_payload.get('markets', []))
-            # If still empty, it might be the new 'ListMarketsResponse' format
-            if not markets and 'next_cursor' in raw_payload:
-                markets = raw_payload.get('data', [])
-        
-        print(f"\n🏛️  QUANT COMMAND CENTER: {time.ctime()}")
-        print(f"{'MARKET TARGET':<35} | {'VOL (24H)':<10} | {'REBATE EDGE'}")
+        print(f"\n🌍 SERVER LOCATION: {location} | BLOCKED: {is_blocked}")
+        print(f"📊  STABILITY RECON: {time.ctime()}")
+        print(f"{'MARKET NAME':<35} | {'VOL (24H)':<10} | {'DAILY EDGE'}")
         print("-" * 75)
+        
+        response = requests.get(URL, timeout=15)
+        markets = response.json()
         
         count = 0
         for m in markets:
-            if not isinstance(m, dict): continue
-            if count >= 12: break
+            name = m.get('question', 'Unknown')[:33]
+            vol_24h = float(m.get('volume24hr', 0) or 0)
             
-            # Extract names and volume safely
-            name = m.get('description', m.get('question', 'Niche Event'))[:33]
-            vol_24h = float(m.get('volume', m.get('volume24hr', 0)) or 0)
+            # Math: 0.25% Rebate * 1% Volume Capture
+            daily_edge = (vol_24h * 0.01) * 0.0025
             
-            # MATH: Maker Rebate Capture (£167/day Target)
-            # 0.25% Rebate Rate * 0.5% Volume Capture Estimate
-            daily_profit = (vol_24h * 0.005) * 0.0025 
-            
-            status = "🔥" if daily_profit > 100 else "  "
-            
-            if vol_24h > 100: # Show any active market
-                print(f"{status}{name:<33} | ${vol_24h:>8,.0f} | £{daily_profit:>8.2f}")
+            if vol_24h > 100:
+                status = "🔥" if daily_edge > 100 else "  "
+                print(f"{status}{name:<33} | ${vol_24h:>8,.0f} | £{daily_edge:>8.2f}")
                 count += 1
-                
+            if count >= 10: break
+
         if count == 0:
-            print(">> STATUS: Scanning for Liquidity... (Try again in 20s)")
+            print(">> ALERT: Connection active, but no high-volume markets found.")
 
     except Exception as e:
-        print(f"DIAGNOSTIC: Handshake error. CTO is reviewing structure... ({e})")
+        print(f"CONNECTION ERROR: {e}")
 
 if __name__ == "__main__":
     while True:
-        get_market_data()
-        time.sleep(20)
-
-if __name__ == "__main__":
-    while True:
-        quant_recon_v3()
-        time.sleep(15) # Refreshing every 15s to catch 2026 volatility
+        diagnostic_hunt()
+        time.sleep(60) # Slower heartbeat to avoid 'Rate Limiting'
