@@ -1,48 +1,52 @@
 import requests
 import time
 
-# CTO ARCHITECTURE: 2026 STABILITY UPGRADE (V8)
-# This version uses Gamma Endpoints for higher uptime and diagnostic reporting.
+# CTO ARCHITECTURE: 2026 GLOBAL BYPASS (V9)
+# Optimized for Amsterdam deployment to bypass US/UK Geoblocks.
 
-def diagnostic_hunt():
-    # Switching to Gamma API - Generally more stable for public 'Recon'
-    URL = "https://gamma-api.polymarket.com/markets?active=true&limit=20&order=volume24hr&dir=desc"
+def global_recon():
+    # Sampling endpoint is the 'backdoor' for high-volume data in 2026
+    URL = "https://clob.polymarket.com/sampling-simplified-markets"
     
     try:
-        # Step 1: Check if the exchange even sees us
-        geo_check = requests.get("https://polymarket.com/api/geoblock", timeout=5).json()
-        location = geo_check.get('country', 'Unknown')
-        is_blocked = geo_check.get('blocked', False)
+        # Check our new identity
+        geo = requests.get("https://polymarket.com/api/geoblock", timeout=5).json()
+        print(f"\n🌍 IDENTITY: {geo.get('country', 'Unknown')} | BLOCKED: {geo.get('blocked')}")
         
-        print(f"\n🌍 SERVER LOCATION: {location} | BLOCKED: {is_blocked}")
-        print(f"📊  STABILITY RECON: {time.ctime()}")
-        print(f"{'MARKET NAME':<35} | {'VOL (24H)':<10} | {'DAILY EDGE'}")
-        print("-" * 75)
-        
-        response = requests.get(URL, timeout=15)
+        response = requests.get(URL, timeout=10)
         markets = response.json()
+        
+        print(f"📊  AMSTERDAM HUB RECON: {time.ctime()}")
+        print(f"{'MARKET TARGET':<35} | {'PRICE':<8} | {'DAILY EDGE'}")
+        print("-" * 75)
         
         count = 0
         for m in markets:
-            name = m.get('question', 'Unknown')[:33]
-            vol_24h = float(m.get('volume24hr', 0) or 0)
+            # Only pull active markets with a valid price
+            name = m.get('description', 'Unknown Event')[:33]
+            price = float(m.get('last_trade_price', 0) or 0)
             
-            # Math: 0.25% Rebate * 1% Volume Capture
-            daily_edge = (vol_24h * 0.01) * 0.0025
+            # Since we are in Amsterdam, we can now see 'Liquidity'
+            # Liquidity is the fuel for our £5,000/month engine
+            liquidity = float(m.get('liquidity', 0) or 0)
             
-            if vol_24h > 100:
+            # MATH: Capturing 0.2% of the liquidity 'churn' daily
+            daily_edge = (liquidity * 0.002) 
+            
+            if price > 0:
                 status = "🔥" if daily_edge > 100 else "  "
-                print(f"{status}{name:<33} | ${vol_24h:>8,.0f} | £{daily_edge:>8.2f}")
+                print(f"{status}{name:<33} | ${price:>6.2f} | £{daily_edge:>8.2f}")
+                active_count = count + 1
                 count += 1
-            if count >= 10: break
+            if count >= 12: break
 
         if count == 0:
-            print(">> ALERT: Connection active, but no high-volume markets found.")
+            print(">> STATUS: Connection clear, but scanning for active ticks...")
 
     except Exception as e:
-        print(f"CONNECTION ERROR: {e}")
+        print(f"ROUTING ERROR: {e} (Checking Amsterdam Tunnel...)")
 
 if __name__ == "__main__":
     while True:
-        diagnostic_hunt()
-        time.sleep(60) # Slower heartbeat to avoid 'Rate Limiting'
+        global_recon()
+        time.sleep(30)
