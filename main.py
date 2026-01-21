@@ -51,3 +51,48 @@ if __name__ == "__main__":
     while True:
         quant_analysis()
         time.sleep(30) # High-frequency refresh for 2026 standards
+
+import requests
+import time
+import json
+
+def quant_recon_v3():
+    # 2026 Gamma API - focus on high-frequency crypto/sports
+    URL = "https://gamma-api.polymarket.com/markets?active=true&limit=15&order=volume24hr&dir=desc"
+    
+    try:
+        response = requests.get(URL)
+        markets = response.json()
+        
+        print(f"\n======== HEDGE FUND RECON: {time.ctime()} ========")
+        print(f"{'TARGET MARKET':<35} | {'SPREAD':<6} | {'REBATE+'} | {'DAILY EDGE'}")
+        print("-" * 80)
+        
+        for m in markets:
+            name = m.get('question', 'Unknown')[:33]
+            prices = m.get('outcomePrices', [0, 0])
+            
+            # Sanitizing data
+            if isinstance(prices, str): prices = json.loads(prices)
+            yes, no = float(prices[0]), float(prices[1])
+            
+            # In 2026, many markets have a 1% 'Taker Fee' that goes to US (the Makers)
+            spread_pct = abs(1.0 - (yes + no)) * 100
+            rebate_rate = 0.0025 # Standard 0.25% Maker Rebate in Jan 2026
+            
+            volume = float(m.get('volume24hr', 0))
+            
+            # Scaled Profit: (Spread + Rebate) * (Our 1% share of total daily volume)
+            daily_edge = (volume * 0.01) * ((spread_pct / 100) + rebate_rate)
+            
+            # Highlight high-potential targets
+            indicator = "🔥" if daily_edge > 100 else "  "
+            print(f"{indicator}{name:<33} | {spread_pct:>5.1f}% | 0.25%   | £{daily_edge:>8.2f}")
+            
+    except Exception as e:
+        print(f"RECON PAUSED: {e}")
+
+if __name__ == "__main__":
+    while True:
+        quant_recon_v3()
+        time.sleep(15) # Refreshing every 15s to catch 2026 volatility
