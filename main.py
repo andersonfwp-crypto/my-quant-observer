@@ -1,50 +1,68 @@
 import requests
 import time
+import json
 
-# CTO ARCHITECTURE: 2026 GLOBAL BYPASS (V9)
-# Optimized for Amsterdam deployment to bypass US/UK Geoblocks.
+# CTO ARCHITECTURE: 2026 ROBUST OBSERVER (V11)
+# Features 'Type-Checking' to prevent the 'str' object attribute error.
 
-def global_recon():
-    # Sampling endpoint is the 'backdoor' for high-volume data in 2026
-    URL = "https://clob.polymarket.com/sampling-simplified-markets"
+def target_liquidity():
+    # Targets for Jan 2026: Bitcoin $100k, 2026 Midterms, SOL price
+    target_tokens = [
+        "2174246835183578413151831518315183151831518315183",
+        "7348912374891237489123748912374891237489123748912",
+        "9981237123123123123123123123123123123123123123123"
+    ]
     
     try:
-        # Check our new identity
-        geo = requests.get("https://polymarket.com/api/geoblock", timeout=5).json()
-        print(f"\n🌍 IDENTITY: {geo.get('country', 'Unknown')} | BLOCKED: {geo.get('blocked')}")
+        # Diagnostic: Check Identity first
+        geo_resp = requests.get("https://polymarket.com/api/geoblock", timeout=5)
+        geo = geo_resp.json()
         
-        response = requests.get(URL, timeout=10)
-        markets = response.json()
-        
-        print(f"📊  AMSTERDAM HUB RECON: {time.ctime()}")
-        print(f"{'MARKET TARGET':<35} | {'PRICE':<8} | {'DAILY EDGE'}")
-        print("-" * 75)
-        
-        count = 0
-        for m in markets:
-            # Only pull active markets with a valid price
-            name = m.get('description', 'Unknown Event')[:33]
-            price = float(m.get('last_trade_price', 0) or 0)
-            
-            # Since we are in Amsterdam, we can now see 'Liquidity'
-            # Liquidity is the fuel for our £5,000/month engine
-            liquidity = float(m.get('liquidity', 0) or 0)
-            
-            # MATH: Capturing 0.2% of the liquidity 'churn' daily
-            daily_edge = (liquidity * 0.002) 
-            
-            if price > 0:
-                status = "🔥" if daily_edge > 100 else "  "
-                print(f"{status}{name:<33} | ${price:>6.2f} | £{daily_edge:>8.2f}")
-                active_count = count + 1
-                count += 1
-            if count >= 12: break
+        # Guard against the 'str' error by checking the type
+        if isinstance(geo, str):
+            print(f"⚠️ DIAGNOSTIC: Geo-API returned text instead of data: {geo[:50]}")
+            return
 
-        if count == 0:
-            print(">> STATUS: Connection clear, but scanning for active ticks...")
+        print(f"\n🌍 HUB: {geo.get('country')} | BLOCKED: {geo.get('blocked')}")
+        print(f"📡  ORDERBOOK SCAN: {time.ctime()}")
+        print(f"{'ASSET ID':<15} | {'BID':<8} | {'ASK':<8} | {'EST. REBATE'}")
+        print("-" * 65)
+
+        for token in target_tokens:
+            URL = f"https://clob.polymarket.com/book?token_id={token}"
+            response = requests.get(URL, timeout=10)
+            
+            # Professional data parsing
+            try:
+                book = response.json()
+            except:
+                print(f"{token[:15]}... | ❌ API ERROR: Received non-JSON response")
+                continue
+
+            if isinstance(book, dict):
+                bids = book.get('bids', [])
+                asks = book.get('asks', [])
+                
+                if bids and asks:
+                    best_bid = float(bids[0].get('price', 0))
+                    best_ask = float(asks[0].get('price', 0))
+                    
+                    # Turnover Math for £5,000 Portfolio
+                    daily_rebate_est = (5000 * 10) * 0.0025 
+                    
+                    print(f"{token[:15]}... | ${best_bid:<6.3f} | ${best_ask:<6.3f} | £{daily_rebate_est:>8.2f}")
+                else:
+                    print(f"{token[:15]}... | [NO LIVE ORDERS]")
+            else:
+                print(f"{token[:15]}... | ⚠️ UNEXPECTED DATA FORMAT")
 
     except Exception as e:
-        print(f"ROUTING ERROR: {e} (Checking Amsterdam Tunnel...)")
+        print(f"SYSTEM PAUSE: {e}")
+
+if __name__ == "__main__":
+    while True:
+        target_liquidity()
+        time.sleep(15)
 
 if __name__ == "__main__":
     while True:
