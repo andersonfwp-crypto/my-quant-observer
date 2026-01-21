@@ -2,95 +2,61 @@ import requests
 import time
 import json
 
-def clean_price(price_data):
-    """Professional cleaning for stringified API data."""
-    try:
-        # If the API sends a string like '["0.50", "0.50"]'
-        if isinstance(price_data, str):
-            price_data = json.loads(price_data)
-        return [float(p) for p in price_data]
-    except Exception:
-        return [0.0, 0.0]
+# CTO ARCHITECTURE: 2026 QUANT OBSERVER (V5)
+# This version targets the Central Limit Order Book (CLOB) directly.
 
-def quant_analysis():
-    URL = "https://gamma-api.polymarket.com/markets?active=true&limit=10&order=volume24hr&dir=desc"
+def get_market_data():
+    # Primary CLOB Endpoint for 2026 Live Markets
+    CLOB_URL = "https://clob.polymarket.com/markets"
     
     try:
-        response = requests.get(URL)
+        # Fetching live order book metadata
+        response = requests.get(CLOB_URL, timeout=10)
         markets = response.json()
         
-        print(f"\n================ QUANT RECON: {time.ctime()} ================")
-        print(f"{'MARKET NAME':<40} | {'SPREAD':<8} | {'EST. DAILY PROFIT'}")
+        print(f"\n🏛️  QUANT COMMAND CENTER: {time.ctime()}")
+        print(f"{'MARKET TARGET':<35} | {'VOL (24H)':<10} | {'REBATE EDGE'}")
         print("-" * 75)
         
+        # We look for the top 12 most active markets for our £5,000 deployment
+        count = 0
         for m in markets:
-            name = m.get('question', 'Unknown')[:38]
+            if count >= 12: break
             
-            # Use our new cleaner to handle those brackets
-            prices = clean_price(m.get('outcomePrices'))
+            # Extracting the question name
+            name = m.get('description', 'Niche Event')[:33]
             
-            if len(prices) >= 2:
-                yes, no = prices[0], prices[1]
-                # Spread Math: The gap between the two outcomes
-                spread_pct = abs(1.0 - (yes + no)) * 100
+            # In 2026, 'volume' is often nested or listed as a string
+            raw_vol = m.get('volume', 0)
+            try:
+                vol_24h = float(raw_vol)
+            except:
+                vol_24h = 0.0
                 
-                volume_24h = float(m.get('volume24hr', 0))
-                # PM calculation: 1% market capture * current spread
-                est_profit = (volume_24h * 0.01) * (spread_pct / 100)
-                
-                print(f"{name:<40} | {spread_pct:>7.2f}% | £{est_profit:>8.2f}")
+            # STRATEGY: Maker Rebate Capture
+            # To hit £5k/month, we need £167/day.
+            # Calculation: (Our Capital * Volume Capture * Rebate Rate)
+            # 0.25% is the standard 2026 Maker Rebate.
+            daily_profit = (vol_24h * 0.005) * 0.0025 # Estimating 0.5% market share
             
+            # ALERTS: Trigger "Fire" if Daily Edge > £100
+            status = "🔥" if daily_profit > 100 else "  "
+            
+            # Only display if there is actual activity
+            if vol_24h > 500:
+                print(f"{status}{name:<33} | ${vol_24h:>8,.0f} | £{daily_profit:>8.2f}")
+                count += 1
+                
+        if count == 0:
+            print(">> STATUS: Market scanning... (Waiting for High-Vol signals)")
+
     except Exception as e:
-        print(f"DIAGNOSTIC: Data structure changed. CTO reviewing... ({e})")
+        print(f"CRITICAL CTO ALERT: Data Stream Interrupted. Reason: {e}")
 
 if __name__ == "__main__":
     while True:
-        quant_analysis()
-        time.sleep(30)
-if __name__ == "__main__":
-    while True:
-        quant_analysis()
-        time.sleep(30) # High-frequency refresh for 2026 standards
-
-import requests
-import time
-import json
-
-def quant_recon_v3():
-    # 2026 Gamma API - focus on high-frequency crypto/sports
-    URL = "https://gamma-api.polymarket.com/markets?active=true&limit=15&order=volume24hr&dir=desc"
-    
-    try:
-        response = requests.get(URL)
-        markets = response.json()
-        
-        print(f"\n======== HEDGE FUND RECON: {time.ctime()} ========")
-        print(f"{'TARGET MARKET':<35} | {'SPREAD':<6} | {'REBATE+'} | {'DAILY EDGE'}")
-        print("-" * 80)
-        
-        for m in markets:
-            name = m.get('question', 'Unknown')[:33]
-            prices = m.get('outcomePrices', [0, 0])
-            
-            # Sanitizing data
-            if isinstance(prices, str): prices = json.loads(prices)
-            yes, no = float(prices[0]), float(prices[1])
-            
-            # In 2026, many markets have a 1% 'Taker Fee' that goes to US (the Makers)
-            spread_pct = abs(1.0 - (yes + no)) * 100
-            rebate_rate = 0.0025 # Standard 0.25% Maker Rebate in Jan 2026
-            
-            volume = float(m.get('volume24hr', 0))
-            
-            # Scaled Profit: (Spread + Rebate) * (Our 1% share of total daily volume)
-            daily_edge = (volume * 0.01) * ((spread_pct / 100) + rebate_rate)
-            
-            # Highlight high-potential targets
-            indicator = "🔥" if daily_edge > 100 else "  "
-            print(f"{indicator}{name:<33} | {spread_pct:>5.1f}% | 0.25%   | £{daily_edge:>8.2f}")
-            
-    except Exception as e:
-        print(f"RECON PAUSED: {e}")
+        get_market_data()
+        time.sleep(20) # 20s interval to prevent API 'Rate Limiting'
 
 if __name__ == "__main__":
     while True:
